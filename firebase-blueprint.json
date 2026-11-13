@@ -1,0 +1,292 @@
+{
+  "entities": {
+    "PlayerProfile": {
+      "title": "Player Profile",
+      "description": "Authenticated Apex Rivals player account, V8-to-V9 backward-compatible progression, currencies, vehicle ownership, and statistics",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Firebase Auth UID of the player" },
+        "username": { "type": "string", "description": "Public racing handle (2..40 chars)" },
+        "avatarUrl": { "type": "string", "description": "Profile avatar URL or preset ID" },
+        "level": { "type": "number", "description": "Player driver level (>= 1)" },
+        "xp": { "type": "number", "description": "Total experience points (>= 0)" },
+        "coins": { "type": "number", "description": "Premium coin balance (>= 0)" },
+        "credits": { "type": "number", "description": "Standard race credit balance (>= 0)" },
+        "totalRaces": { "type": "number", "description": "Lifetime completed races (>= 0)" },
+        "totalVictories": { "type": "number", "description": "Lifetime P1-P3 victories (>= 0)" },
+        "ownedVehicleIds": { "type": "array", "description": "Bounded list of owned vehicle IDs (<= 50)" },
+        "unlockedAchievements": { "type": "array", "description": "Bounded list of unlocked achievement IDs (<= 100)" },
+        "unlockedTrackIds": { "type": "array", "description": "Bounded list of unlocked circuit IDs (<= 50)" },
+        "careerTierUnlocked": { "type": "number", "description": "Highest unlocked championship tier (1..10)" },
+        "dailyLoginStreak": { "type": "number", "description": "Consecutive daily login streak days (0..3650)" },
+        "lastDailyClaimDate": { "type": "string", "description": "ISO date of last daily login reward claim (YYYY-MM-DD)" },
+        "schemaVersion": { "type": "number", "description": "Schema version marker (8 for legacy V8, 9 for V9/2.0)" },
+        "v8LegacyMigrated": { "type": "boolean", "description": "Whether V8 production profile data was migrated in-place" },
+        "syncRevision": { "type": "number", "description": "Monotonic save revision counter to prevent stale overwrite" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp of account creation (FieldValue.serverTimestamp())" },
+        "lastActiveAt": { "type": "string", "format": "date-time", "description": "Server timestamp of last activity (FieldValue.serverTimestamp())" }
+      },
+      "required": [
+        "userId",
+        "username",
+        "level",
+        "xp",
+        "coins",
+        "credits",
+        "totalRaces",
+        "totalVictories",
+        "ownedVehicleIds",
+        "unlockedAchievements",
+        "careerTierUnlocked",
+        "syncRevision",
+        "createdAt",
+        "lastActiveAt"
+      ]
+    },
+    "CloudSaveSnapshot": {
+      "title": "Cloud Save Snapshot",
+      "description": "Synchronized garage upgrades, customization loadouts, career state, settings, and V8 rollback backup slots with conflict protection",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner Firebase Auth UID" },
+        "saveSlotId": { "type": "string", "description": "Save slot identifier (e.g. primary, v8_rollback_backup)" },
+        "syncRevision": { "type": "number", "description": "Monotonically increasing save revision (>= 1)" },
+        "clientDeviceName": { "type": "string", "description": "Device model identifier" },
+        "loadoutsJson": { "type": "string", "description": "Serialized vehicle customization and Stage 1-5 upgrade loadouts" },
+        "settingsJson": { "type": "string", "description": "Serialized graphics, audio, and control preferences" },
+        "careerProgressJson": { "type": "string", "description": "Serialized championship stars, unlocked tracks, and mission progress" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Initial save creation server timestamp (FieldValue.serverTimestamp())" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Latest sync server timestamp (FieldValue.serverTimestamp())" }
+      },
+      "required": [
+        "userId",
+        "saveSlotId",
+        "syncRevision",
+        "clientDeviceName",
+        "loadoutsJson",
+        "settingsJson",
+        "careerProgressJson",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "EconomyTransaction": {
+      "title": "Economy Transaction",
+      "description": "Append-only audited economy transaction record preventing negative balances and duplicate rewards",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner Firebase Auth UID" },
+        "txType": {
+          "type": "string",
+          "enum": [
+            "RACE_REWARD",
+            "DAILY_REWARD",
+            "MISSION_REWARD",
+            "ACHIEVEMENT_REWARD",
+            "VEHICLE_PURCHASE",
+            "VEHICLE_UPGRADE"
+          ],
+          "description": "Category of economy transaction"
+        },
+        "idempotencyKey": { "type": "string", "description": "Unique transaction key matching document ID" },
+        "coinsDelta": { "type": "number", "description": "Signed change in coins (-10000..10000)" },
+        "creditsDelta": { "type": "number", "description": "Signed change in credits (-1000000..250000)" },
+        "balanceAfterCoins": { "type": "number", "description": "Resulting coin balance (>= 0)" },
+        "balanceAfterCredits": { "type": "number", "description": "Resulting credit balance (>= 0)" },
+        "referenceId": { "type": "string", "description": "Associated raceId, missionId, achievementId, or vehicleId" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp of transaction (FieldValue.serverTimestamp())" }
+      },
+      "required": [
+        "userId",
+        "txType",
+        "idempotencyKey",
+        "coinsDelta",
+        "creditsDelta",
+        "balanceAfterCoins",
+        "balanceAfterCredits",
+        "referenceId",
+        "createdAt"
+      ]
+    },
+    "RaceResultRecord": {
+      "title": "Race Result Record",
+      "description": "Anti-cheat validated competitive race result and leaderboard entry",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Authenticated player UID" },
+        "driverName": { "type": "string", "description": "Player display handle" },
+        "trackId": { "type": "string", "description": "Canonical circuit ID" },
+        "trackName": { "type": "string", "description": "Circuit display name" },
+        "vehicleId": { "type": "string", "description": "Canonical vehicle ID" },
+        "vehicleName": { "type": "string", "description": "Vehicle display name" },
+        "gameMode": {
+          "type": "string",
+          "enum": ["QUICK_RACE", "CAREER", "TIME_TRIAL", "DRIFT", "CHAMPIONSHIP", "MULTIPLAYER"],
+          "description": "Race mode identifier"
+        },
+        "finishingPosition": { "type": "number", "description": "Finishing position (1..24)" },
+        "raceDurationMs": { "type": "number", "description": "Total race duration in ms (15000..7200000)" },
+        "lapTimeMs": { "type": "number", "description": "Best lap time in ms (12000..3600000)" },
+        "topSpeedKmh": { "type": "number", "description": "Peak speed in km/h (10..550)" },
+        "creditsReward": { "type": "number", "description": "Credits earned (0..100000)" },
+        "xpReward": { "type": "number", "description": "XP earned (0..25000)" },
+        "weekBucket": { "type": "string", "description": "ISO week bucket for weekly leaderboards (e.g. 2026-W45)" },
+        "platform": { "type": "string", "description": "Client platform identifier" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp of race completion (FieldValue.serverTimestamp())" }
+      },
+      "required": [
+        "userId",
+        "driverName",
+        "trackId",
+        "trackName",
+        "vehicleId",
+        "vehicleName",
+        "gameMode",
+        "finishingPosition",
+        "raceDurationMs",
+        "lapTimeMs",
+        "topSpeedKmh",
+        "creditsReward",
+        "xpReward",
+        "weekBucket",
+        "platform",
+        "createdAt"
+      ]
+    },
+    "EventCompletionRecord": {
+      "title": "Event Completion Record",
+      "description": "Per-player daily mission, weekly challenge, and seasonal event completion record",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner Firebase Auth UID" },
+        "eventId": { "type": "string", "description": "Unique mission or event identifier" },
+        "eventType": {
+          "type": "string",
+          "enum": ["DAILY_MISSION", "WEEKLY_CHALLENGE", "SEASONAL_EVENT", "CHAMPIONSHIP_SERIES"],
+          "description": "Event classification"
+        },
+        "progressValue": { "type": "number", "description": "Current progress counter (>= 0)" },
+        "targetValue": { "type": "number", "description": "Required target counter (>= 1)" },
+        "rewardCredits": { "type": "number", "description": "Credit reward amount (0..100000)" },
+        "rewardCoins": { "type": "number", "description": "Coin reward amount (0..1000)" },
+        "claimed": { "type": "boolean", "description": "Whether the reward has been claimed" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Initial record server timestamp (FieldValue.serverTimestamp())" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Latest update server timestamp (FieldValue.serverTimestamp())" }
+      },
+      "required": [
+        "userId",
+        "eventId",
+        "eventType",
+        "progressValue",
+        "targetValue",
+        "rewardCredits",
+        "rewardCoins",
+        "claimed",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "AchievementRecord": {
+      "title": "Achievement Record",
+      "description": "Per-player milestone and achievement tracking with terminal reward claim locking",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner Firebase Auth UID" },
+        "achievementId": { "type": "string", "description": "Unique achievement identifier matching document ID" },
+        "title": { "type": "string", "description": "Achievement display title (2..80 chars)" },
+        "category": {
+          "type": "string",
+          "enum": ["CAREER", "GARAGE", "DRIFT", "SPEED", "MULTIPLAYER"],
+          "description": "Achievement domain category"
+        },
+        "progressValue": { "type": "number", "description": "Current milestone counter (0..10000000)" },
+        "targetValue": { "type": "number", "description": "Target milestone counter (1..10000000)" },
+        "rewardCredits": { "type": "number", "description": "Credit reward upon unlocking (0..100000)" },
+        "rewardCoins": { "type": "number", "description": "Coin reward upon unlocking (0..1000)" },
+        "rewardXp": { "type": "number", "description": "XP reward upon unlocking (0..25000)" },
+        "unlocked": { "type": "boolean", "description": "True when progressValue >= targetValue" },
+        "claimed": { "type": "boolean", "description": "True once the achievement reward has been claimed" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Initial tracking server timestamp (FieldValue.serverTimestamp())" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Latest progress server timestamp (FieldValue.serverTimestamp())" }
+      },
+      "required": [
+        "userId",
+        "achievementId",
+        "title",
+        "category",
+        "progressValue",
+        "targetValue",
+        "rewardCredits",
+        "rewardCoins",
+        "rewardXp",
+        "unlocked",
+        "claimed",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "MultiplayerRoom": {
+      "title": "Multiplayer Room",
+      "description": "Matchmaking and private room session coordinator referencing authoritative game server endpoints",
+      "type": "object",
+      "properties": {
+        "hostUserId": { "type": "string", "description": "UID of the room creator/host" },
+        "roomCode": { "type": "string", "description": "6-character invite code" },
+        "trackId": { "type": "string", "description": "Selected circuit ID" },
+        "vehicleClass": { "type": "string", "description": "Allowed vehicle class" },
+        "status": {
+          "type": "string",
+          "enum": ["WAITING", "RACING", "FINISHED"],
+          "description": "Session lifecycle state (locked once FINISHED)"
+        },
+        "maxPlayers": { "type": "number", "description": "Maximum players allowed (2..8)" },
+        "playerUids": { "type": "array", "description": "Bounded list of joined player UIDs (<= 8)" },
+        "dedicatedServerEndpoint": { "type": "string", "description": "Authoritative UDP/WebSocket relay endpoint" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Room creation server timestamp (FieldValue.serverTimestamp())" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Last room state update server timestamp (FieldValue.serverTimestamp())" }
+      },
+      "required": [
+        "hostUserId",
+        "roomCode",
+        "trackId",
+        "vehicleClass",
+        "status",
+        "maxPlayers",
+        "playerUids",
+        "dedicatedServerEndpoint",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/PlayerProfile" },
+      "description": "Player account profile, level, currencies, owned vehicles, unlocked tracks, and V8-to-V9 migration state (currencies/XP/unlocks mutated authoritatively via Cloud Functions)"
+    },
+    "/users/{userId}/cloud_saves/{saveSlotId}": {
+      "schema": { "$ref": "#/entities/CloudSaveSnapshot" },
+      "description": "Synchronized cloud save slots and immutable V8 rollback snapshots with monotonic revision conflict protection"
+    },
+    "/users/{userId}/economy_transactions/{txId}": {
+      "schema": { "$ref": "#/entities/EconomyTransaction" },
+      "description": "Server-authoritative append-only economy ledger written exclusively via Cloud Functions Admin SDK"
+    },
+    "/race_results/{raceResultId}": {
+      "schema": { "$ref": "#/entities/RaceResultRecord" },
+      "description": "Server-verified global, weekly, time-trial, and championship leaderboard race results written via submitCompetitiveRaceResult Cloud Function"
+    },
+    "/users/{userId}/event_completions/{eventId}": {
+      "schema": { "$ref": "#/entities/EventCompletionRecord" },
+      "description": "Server-verified daily mission, weekly challenge, and seasonal event completion states"
+    },
+    "/users/{userId}/achievements/{achievementId}": {
+      "schema": { "$ref": "#/entities/AchievementRecord" },
+      "description": "Server-verified per-player achievement progress and terminal reward claim records"
+    },
+    "/multiplayer_rooms/{roomId}": {
+      "schema": { "$ref": "#/entities/MultiplayerRoom" },
+      "description": "Multiplayer matchmaking and private lobby rooms with terminal state locking"
+    }
+  }
+}

@@ -1,0 +1,215 @@
+package com.example.model
+
+enum class VehicleType {
+  CAR,
+  MOTORBIKE
+}
+
+enum class PlatformType(val displayName: String, val shortCode: String) {
+  PC("Steam / PC", "PC"),
+  PLAYSTATION("PlayStation 5", "PS5"),
+  XBOX("Xbox Series X", "XBOX"),
+  IOS("iOS", "iOS"),
+  ANDROID("Android", "AND")
+}
+
+data class Vehicle(
+  val id: String,
+  val name: String,
+  val type: VehicleType,
+  val category: String, // e.g. "GT3 Racing", "Hypercar Prototype", "Classic Golden Age", "MotoGP 1000cc"
+  val horsepower: Int,
+  val topSpeedKmh: Int,
+  val weightKg: Int,
+  val maxRpm: Int,
+  val idleRpm: Int = 1200,
+  val redlineRpm: Int,
+  val gears: Int = 6,
+  val maxLeanAngleDeg: Float = 0f, // > 0 for Motorbikes (e.g. 64°)
+  val acceleration0to100: Float, // seconds
+  val peakCorneringG: Float,
+  val description: String,
+  val tireCompound: String = "Soft Slick",
+  val aeroDownforce: Int = 75, // percentage
+  val brakeBiasFront: Int = 58, // percentage
+  val isClassic: Boolean = false,
+  val liveryNumber: String = "#42",
+  val liveryColorHex: Long = 0xFF00E5FF
+)
+
+val AVAILABLE_VEHICLES = listOf(
+  Vehicle(
+    id = "car_hyperion7_nitro",
+    name = "Hyperion-7 Hypercar (#42 Volt/Nitro)",
+    type = VehicleType.CAR,
+    category = "Hypercar Prototype",
+    horsepower = 1050,
+    topSpeedKmh = 362,
+    weightKg = 1180,
+    maxRpm = 10500,
+    redlineRpm = 9800,
+    gears = 7,
+    acceleration0to100 = 2.1f,
+    peakCorneringG = 3.2f,
+    description = "Featured in Neo Tokyo Night City race (#42 Volt/Nitro Livery). Ultra-light carbon monocoque with twin-turbo V8 hybrid delivering 218+ km/h street grip.",
+    liveryNumber = "#42",
+    liveryColorHex = 0xFF00E5FF
+  ),
+  Vehicle(
+    id = "car_gt3_apex",
+    name = "Apex GT3-R Twin-Turbo (Gulf Orange #55)",
+    type = VehicleType.CAR,
+    category = "GT3 Racing",
+    horsepower = 640,
+    topSpeedKmh = 322,
+    weightKg = 1240,
+    maxRpm = 9200,
+    redlineRpm = 8500,
+    gears = 6,
+    acceleration0to100 = 2.6f,
+    peakCorneringG = 2.6f,
+    description = "McLaren 720S GT3 in Gulf Orange and Cyan livery (#55) from the night grid. Precision carbon splitter and high-downforce racing aerodynamics.",
+    liveryNumber = "#55",
+    liveryColorHex = 0xFFFF6D00
+  ),
+  Vehicle(
+    id = "car_scuderia_corsa",
+    name = "Scuderia Corsa V8 (Tricolore Red #51)",
+    type = VehicleType.CAR,
+    category = "GT3 Racing",
+    horsepower = 660,
+    topSpeedKmh = 328,
+    weightKg = 1260,
+    maxRpm = 9400,
+    redlineRpm = 8800,
+    gears = 6,
+    acceleration0to100 = 2.5f,
+    peakCorneringG = 2.7f,
+    description = "Ferrari 488/296 GT3 in racing rosso (#51) from the Spa night grid. High-revving flat-plane crank twin-turbo V8 with razor apex tracking.",
+    liveryNumber = "#51",
+    liveryColorHex = 0xFFD50000
+  ),
+  Vehicle(
+    id = "car_amg_gt_black",
+    name = "AMG GT Black Edition (Bilstein #68)",
+    type = VehicleType.CAR,
+    category = "GT3 Racing",
+    horsepower = 650,
+    topSpeedKmh = 325,
+    weightKg = 1280,
+    maxRpm = 8800,
+    redlineRpm = 8000,
+    gears = 6,
+    acceleration0to100 = 2.7f,
+    peakCorneringG = 2.5f,
+    description = "Mercedes-AMG GT3 in Bilstein Yellow livery (#68) from the night grid. Massive front-mid V8 exhaust note with active downforce wing.",
+    liveryNumber = "#68",
+    liveryColorHex = 0xFFFFD600
+  ),
+  Vehicle(
+    id = "car_manthey_911_gt3",
+    name = "Manthey Racing 911 GT3 R (#91 Grello)",
+    type = VehicleType.CAR,
+    category = "GT3 Racing",
+    horsepower = 565,
+    topSpeedKmh = 315,
+    weightKg = 1250,
+    maxRpm = 9500,
+    redlineRpm = 9000,
+    gears = 6,
+    acceleration0to100 = 2.8f,
+    peakCorneringG = 2.9f,
+    description = "Porsche 911 GT3 R (#91) with glowing carbon ceramic brake rotors from the night GP photo. Rear-engine drift stability and howling 9,500 RPM boxer flat-six.",
+    liveryNumber = "#91",
+    liveryColorHex = 0xFF76FF03
+  ),
+  Vehicle(
+    id = "car_ts050_hybrid",
+    name = "TS050 Le Mans Hybrid (#7 Gazoo)",
+    type = VehicleType.CAR,
+    category = "LMP1 / Hypercar",
+    horsepower = 1000,
+    topSpeedKmh = 358,
+    weightKg = 878,
+    maxRpm = 11000,
+    redlineRpm = 10000,
+    gears = 7,
+    acceleration0to100 = 2.0f,
+    peakCorneringG = 3.5f,
+    description = "Toyota Gazoo Racing Hypercar (#7) from the night street GP photo. 8MJ supercapacitor hybrid all-wheel-drive with instant electric torque out of corners.",
+    liveryNumber = "#7",
+    liveryColorHex = 0xFFE0E0E0
+  ),
+  Vehicle(
+    id = "car_classic_boss_69",
+    name = "Classic 1969 Boss Mach 1 V8",
+    type = VehicleType.CAR,
+    category = "Classic Golden Age",
+    horsepower = 490,
+    topSpeedKmh = 275,
+    weightKg = 1420,
+    maxRpm = 7200,
+    redlineRpm = 6500,
+    gears = 5,
+    acceleration0to100 = 3.8f,
+    peakCorneringG = 1.6f,
+    description = "Golden age American muscle icon. Naturally aspirated big-block V8 with deep rumbling exhaust, wide rear bias tires, and thrilling power slides.",
+    isClassic = true,
+    liveryNumber = "#69",
+    liveryColorHex = 0xFFFFAB00
+  ),
+  Vehicle(
+    id = "car_classic_rs_73",
+    name = "Classic 1973 RS 2.7 Carrera",
+    type = VehicleType.CAR,
+    category = "Classic Golden Age",
+    horsepower = 310,
+    topSpeedKmh = 260,
+    weightKg = 960,
+    maxRpm = 8200,
+    redlineRpm = 7500,
+    gears = 5,
+    acceleration0to100 = 4.2f,
+    peakCorneringG = 1.8f,
+    description = "Golden age lightweight sports classic with iconic rear ducktail spoiler. Air-cooled mechanical fuel-injected flat-six with purist analog handling.",
+    isClassic = true,
+    liveryNumber = "#73",
+    liveryColorHex = 0xFF00B0FF
+  ),
+  Vehicle(
+    id = "bike_superbike_1000",
+    name = "Pulse V4R Superbike",
+    type = VehicleType.MOTORBIKE,
+    category = "1000cc Superbike",
+    horsepower = 224,
+    topSpeedKmh = 332,
+    weightKg = 172,
+    maxRpm = 16500,
+    redlineRpm = 15200,
+    gears = 6,
+    maxLeanAngleDeg = 64f,
+    acceleration0to100 = 2.4f,
+    peakCorneringG = 1.9f,
+    description = "Ultra-lightweight liter-class track missile. Features extreme 64° MotoGP lean angle and active anti-wheelie aerodynamics.",
+    liveryNumber = "#01",
+    liveryColorHex = 0xFFFF1744
+  ),
+  Vehicle(
+    id = "car_formula_apex",
+    name = "Formula Apex Hybrid",
+    type = VehicleType.CAR,
+    category = "Formula Single-Seater",
+    horsepower = 1010,
+    topSpeedKmh = 355,
+    weightKg = 798,
+    maxRpm = 12500,
+    redlineRpm = 11800,
+    gears = 8,
+    maxLeanAngleDeg = 0f,
+    acceleration0to100 = 1.9f,
+    peakCorneringG = 3.6f,
+    description = "Pinnacle open-wheel racecar with ground-effect venturi tunnels and DRS speed boosts.",
+    liveryNumber = "#33",
+    liveryColorHex = 0xFF00E5FF
+  )
+)

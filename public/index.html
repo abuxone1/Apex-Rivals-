@@ -1,0 +1,846 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="description" content="APEX RIVALS: MOTORSPORT - Professional 3D Mobile Racing Game by Apex Dynamics Motorsport Studios, founded by Abdulkadri Jaiteh. Slogan: DREAM. BUILD. RACE.">
+  <title>Welcome to "Apex Dynamics Motorsport Studios" | APEX RIVALS: MOTORSPORT</title>
+  <style>
+    :root {
+      --bg: #070a0f;
+      --surface: #0e141d;
+      --surface-2: #151d28;
+      --border: #212c3b;
+      --text: #f0f4f8;
+      --muted: #8e9cae;
+      --racing-red: #ff1838;
+      --racing-red-glow: rgba(255, 24, 56, 0.45);
+      --metallic-silver: #c8d1dc;
+      --neon-cyan: #00e5ff;
+      --neon-amber: #ffbf47;
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body {
+      margin: 0; padding: 0; width: 100%; height: 100%;
+      overflow: hidden; background: var(--bg); color: var(--text);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      user-select: none;
+    }
+
+    #canvas-container {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      z-index: 1;
+    }
+
+    /* --- UI OVERLAY LAYER --- */
+    .ui-layer {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      z-index: 10; pointer-events: none;
+      display: flex; flex-direction: column; justify-content: space-between;
+    }
+
+    .interactive, .menu-view, .ui-modal {
+      pointer-events: auto;
+    }
+
+    /* --- HORIZONTAL ORIENTATION ASSIST BANNER --- */
+    #orientation-banner {
+      position: absolute; top: 0; left: 0; width: 100%;
+      background: linear-gradient(90deg, rgba(255,24,56,0.92), rgba(14,20,29,0.95), rgba(0,229,255,0.92));
+      color: #fff; padding: 8px 16px; font-size: 11px; font-weight: 800;
+      letter-spacing: 0.08em; display: none; justify-content: space-between;
+      align-items: center; z-index: 99; backdrop-filter: blur(8px);
+      box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+    }
+    @media (orientation: portrait) {
+      #orientation-banner { display: flex; }
+    }
+
+    /* --- MENUS & HORIZONTAL SPLIT LAYOUT --- */
+    .menu-view {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      background: radial-gradient(circle at 30% 50%, rgba(14,20,29,0.85) 0%, rgba(7,10,15,0.98) 100%);
+      display: none; flex-direction: column; justify-content: space-between;
+      padding: clamp(12px, 3vw, 28px);
+      box-sizing: border-box; z-index: 20; overflow-y: auto;
+    }
+    .menu-view.active { display: flex; }
+
+    /* Horizontal layout columns for landscape / wide viewports */
+    .horizontal-layout-container {
+      display: flex; flex-direction: column; gap: 20px; width: 100%;
+      max-width: 1200px; margin: auto;
+    }
+    @media (min-aspect-ratio: 4/3), (min-width: 768px) {
+      .horizontal-layout-container {
+        flex-direction: row; align-items: center; justify-content: space-between;
+      }
+      .horizontal-col-left {
+        flex: 1.2; max-width: 580px;
+      }
+      .horizontal-col-right {
+        flex: 1; max-width: 480px;
+      }
+    }
+
+    .brand-header {
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 12px;
+    }
+    .studio-badge {
+      display: flex; align-items: center; gap: 12px; cursor: pointer;
+    }
+    .logo-emblem {
+      width: 46px; height: 46px; border-radius: 12px;
+      background: linear-gradient(135deg, #1c222e, #0c1017);
+      border: 1.5px solid var(--racing-red);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 900; font-size: 22px; color: var(--racing-red);
+      box-shadow: 0 0 15px var(--racing-red-glow);
+    }
+    .studio-meta h2 {
+      margin: 0; font-size: 13px; letter-spacing: 0.16em;
+      text-transform: uppercase; color: var(--racing-red); font-weight: 800;
+    }
+    .studio-meta p {
+      margin: 2px 0 0; font-size: 11px; color: var(--muted); letter-spacing: 0.06em;
+    }
+    .owner-pill {
+      background: rgba(255,255,255,0.05); border: 1px solid var(--border);
+      padding: 6px 14px; border-radius: 20px; font-size: 11px;
+      color: var(--metallic-silver); letter-spacing: 0.06em;
+      font-weight: 700;
+    }
+
+    .slogan-banner {
+      font-size: clamp(11px, 2.2vw, 13px); font-weight: 900;
+      letter-spacing: 0.28em; text-transform: uppercase; color: var(--neon-cyan);
+      margin-bottom: 6px; text-shadow: 0 0 10px rgba(0,229,255,0.4);
+    }
+    .game-title {
+      font-size: clamp(28px, 6vw, 54px); font-weight: 900;
+      line-height: 0.98; letter-spacing: -0.04em; margin: 0 0 12px 0;
+      background: linear-gradient(180deg, #ffffff 40%, var(--metallic-silver) 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .game-lead {
+      font-size: clamp(12px, 2.4vw, 15px); line-height: 1.5;
+      color: var(--muted); margin: 0 0 20px 0;
+    }
+
+    .btn-row {
+      display: flex; gap: 10px; flex-wrap: wrap;
+    }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 12px 20px; border-radius: 10px; font-size: 13px; font-weight: 800;
+      letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer;
+      transition: all 0.18s ease; border: none; outline: none;
+    }
+    .btn-primary {
+      background: var(--racing-red); color: #fff;
+      box-shadow: 0 4px 18px var(--racing-red-glow);
+    }
+    .btn-primary:active { transform: scale(0.97); }
+    .btn-secondary {
+      background: var(--surface-2); color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-secondary:active { transform: scale(0.97); }
+    .btn-accent {
+      background: var(--neon-cyan); color: #070a0f; font-weight: 900;
+      box-shadow: 0 2px 14px rgba(0,229,255,0.35);
+    }
+
+    /* --- HORIZONTAL COCKPIT HUD STYLING --- */
+    #hud-overlay {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      pointer-events: none; display: none;
+      flex-direction: column; justify-content: space-between;
+      padding: clamp(8px, 2vw, 16px); box-sizing: border-box; z-index: 15;
+    }
+    #hud-overlay.active { display: flex; }
+
+    /* Horizontal Top Cockpit Bar */
+    .hud-top-bar {
+      display: flex; justify-content: space-between; align-items: center;
+      width: 100%; gap: 10px;
+    }
+    .hud-chip {
+      background: rgba(14, 20, 29, 0.88); backdrop-filter: blur(10px);
+      border: 1px solid var(--border); border-radius: 10px;
+      padding: 6px 12px; pointer-events: auto; display: flex;
+      align-items: center; gap: 8px;
+    }
+    .hud-pos-pill {
+      font-size: 24px; font-weight: 900; color: var(--racing-red);
+      font-family: monospace; line-height: 1;
+    }
+    .hud-lap-text {
+      font-size: 11px; font-weight: 800; color: var(--text);
+      letter-spacing: 0.08em;
+    }
+    .hud-timer-text {
+      font-size: 15px; font-weight: 800; color: var(--neon-cyan);
+      font-family: monospace; letter-spacing: 0.05em;
+    }
+
+    /* Horizontal Minimap Circuit Tracker */
+    .hud-track-progress {
+      flex: 1; max-width: 380px; height: 12px;
+      background: rgba(21, 29, 40, 0.85); border: 1px solid var(--border);
+      border-radius: 6px; position: relative; overflow: visible;
+      margin: 0 8px; pointer-events: auto;
+    }
+    .track-runner-player {
+      position: absolute; top: -3px; left: 0%;
+      width: 18px; height: 18px; border-radius: 50%;
+      background: var(--racing-red); border: 2px solid #fff;
+      box-shadow: 0 0 10px var(--racing-red);
+      transform: translateX(-50%); transition: left 0.1s linear;
+      z-index: 3;
+    }
+    .track-runner-ai {
+      position: absolute; top: 0px; left: 0%;
+      width: 12px; height: 12px; border-radius: 50%;
+      transform: translateX(-50%); transition: left 0.1s linear;
+      z-index: 2;
+    }
+
+    /* Horizontal Bottom Cockpit Bar */
+    .hud-bottom-bar {
+      display: flex; justify-content: space-between; align-items: flex-end;
+      width: 100%; pointer-events: none; gap: 10px;
+    }
+
+    /* Left Steer Buttons Horizontal Cluster */
+    .steer-cluster-horizontal {
+      display: flex; gap: 8px; pointer-events: auto;
+    }
+    .steer-btn {
+      width: clamp(66px, 13vw, 86px); height: clamp(56px, 10vw, 72px);
+      border-radius: 14px; border: 1.5px solid var(--border);
+      background: rgba(20, 28, 40, 0.82); backdrop-filter: blur(10px);
+      color: var(--text); font-weight: 900; font-size: 12px;
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; cursor: pointer; user-select: none;
+      touch-action: none; transition: transform 0.08s, background 0.08s;
+    }
+    .steer-btn:active {
+      transform: scale(0.93); background: rgba(255, 24, 56, 0.4);
+      border-color: var(--racing-red);
+    }
+
+    /* Center Low-Profile Horizontal Telemetry Dash */
+    .telemetry-horizontal-dash {
+      display: flex; flex-direction: column; align-items: center;
+      background: rgba(14, 20, 29, 0.92); border: 1.5px solid var(--border);
+      border-radius: 14px; padding: 6px 16px; min-width: 160px;
+      backdrop-filter: blur(10px); pointer-events: auto;
+    }
+    .speedo-row {
+      display: flex; align-items: baseline; gap: 6px;
+    }
+    .speed-number {
+      font-size: clamp(34px, 6vw, 48px); font-weight: 900;
+      color: #fff; line-height: 0.9; font-family: monospace;
+    }
+    .speed-unit {
+      font-size: 11px; font-weight: 800; color: var(--muted);
+      letter-spacing: 0.15em;
+    }
+    .gear-chip {
+      padding: 1px 8px; border-radius: 5px;
+      background: var(--racing-red); color: #fff; font-weight: 900;
+      font-size: 13px; font-family: monospace; margin-left: 6px;
+    }
+    .rpm-bar-container {
+      width: 100%; height: 6px; background: rgba(255,255,255,0.1);
+      border-radius: 3px; margin-top: 6px; overflow: hidden;
+    }
+    .rpm-bar {
+      height: 100%; width: 25%;
+      background: linear-gradient(90deg, var(--neon-cyan), var(--neon-amber) 75%, var(--racing-red) 95%);
+      transition: width 0.05s linear;
+    }
+    .boost-bar-container {
+      width: 100%; height: 4px; background: rgba(255,255,255,0.08);
+      border-radius: 2px; margin-top: 4px; overflow: hidden;
+    }
+    .boost-bar {
+      height: 100%; width: 100%; background: var(--neon-cyan);
+      box-shadow: 0 0 6px rgba(0,229,255,0.6);
+    }
+
+    /* Right Pedals Horizontal Cluster */
+    .pedals-cluster-horizontal {
+      display: flex; gap: 8px; pointer-events: auto;
+    }
+    .pedal-btn {
+      width: clamp(60px, 12vw, 80px); height: clamp(56px, 10vw, 72px);
+      border-radius: 14px; border: 1.5px solid var(--border);
+      background: rgba(20, 28, 40, 0.82); backdrop-filter: blur(10px);
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; font-weight: 900; font-size: 11px;
+      letter-spacing: 0.05em; cursor: pointer; user-select: none;
+      touch-action: none; transition: transform 0.08s, background 0.08s;
+    }
+    .pedal-btn:active { transform: scale(0.93); }
+    .pedal-btn.gas {
+      border-color: rgba(0, 229, 255, 0.5);
+      background: rgba(0, 229, 255, 0.16); color: var(--neon-cyan);
+    }
+    .pedal-btn.brake {
+      border-color: rgba(255, 24, 56, 0.5);
+      background: rgba(255, 24, 56, 0.2); color: var(--racing-red);
+    }
+    .pedal-btn.boost {
+      border-color: rgba(255, 191, 71, 0.5);
+      background: rgba(255, 191, 71, 0.18); color: var(--neon-amber);
+    }
+
+    /* --- MODALS (WELCOME WINDOW / PAUSE / FINISH / GARAGE) --- */
+    .ui-modal {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(7, 10, 15, 0.90); backdrop-filter: blur(14px);
+      display: none; align-items: center; justify-content: center;
+      z-index: 30; padding: clamp(12px, 3vw, 24px); box-sizing: border-box;
+      overflow-y: auto;
+    }
+    .ui-modal.active { display: flex; }
+    .modal-box {
+      background: var(--surface); border: 1.5px solid var(--border);
+      border-radius: 20px; padding: clamp(16px, 3vw, 28px); max-width: 640px; width: 100%;
+      text-align: center; box-shadow: 0 16px 50px rgba(0,0,0,0.7);
+      max-height: 94vh; overflow-y: auto;
+    }
+
+    /* Dedicated Welcome Window Styling */
+    .welcome-window-box {
+      max-width: 780px; text-align: left;
+      border: 1.5px solid rgba(255, 24, 56, 0.4);
+      background: linear-gradient(135deg, rgba(14,20,29,0.98), rgba(21,29,40,0.95));
+      box-shadow: 0 0 35px rgba(255, 24, 56, 0.25);
+    }
+    .welcome-header {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      margin-bottom: 16px; border-bottom: 1px solid var(--border);
+      padding-bottom: 14px;
+    }
+    .welcome-title {
+      font-size: clamp(20px, 4vw, 32px); font-weight: 900;
+      color: #fff; line-height: 1.1; margin: 0 0 6px 0;
+      letter-spacing: -0.02em;
+    }
+    .welcome-subtitle {
+      font-size: 13px; font-weight: 800; color: var(--racing-red);
+      letter-spacing: 0.12em; text-transform: uppercase; margin: 0;
+    }
+    .welcome-owner {
+      font-size: 11px; color: var(--neon-cyan); margin-top: 4px;
+      letter-spacing: 0.06em;
+    }
+
+    .welcome-features-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px; margin: 16px 0 20px 0;
+    }
+    .feature-item-card {
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: 12px; padding: 12px;
+    }
+    .feature-item-card h4 {
+      margin: 0 0 4px 0; font-size: 12px; color: var(--text);
+      display: flex; align-items: center; gap: 6px;
+    }
+    .feature-item-card p {
+      margin: 0; font-size: 11px; color: var(--muted); line-height: 1.4;
+    }
+
+    .stat-grid {
+      display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 20px;
+    }
+    .stat-item {
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: 12px; padding: 10px; text-align: center;
+    }
+    .stat-val { font-size: 18px; font-weight: 900; color: var(--neon-cyan); font-family: monospace; }
+    .stat-label { font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; margin-top: 2px; }
+
+    /* Livery Chips in Garage */
+    .livery-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 10px; margin-bottom: 20px;
+    }
+    .livery-chip {
+      background: var(--surface-2); border: 1.5px solid var(--border);
+      border-radius: 12px; padding: 12px; cursor: pointer; text-align: left;
+      transition: all 0.15s ease;
+    }
+    .livery-chip.selected {
+      border-color: var(--racing-red); box-shadow: 0 0 12px var(--racing-red-glow);
+    }
+    .livery-chip h4 { margin: 0 0 4px 0; font-size: 13px; color: #fff; }
+    .livery-chip span { font-size: 11px; color: var(--muted); }
+
+    /* Championship Standings Table */
+    .standings-table {
+      width: 100%; border-collapse: collapse; margin-bottom: 20px; text-align: left;
+    }
+    .standings-table th, .standings-table td {
+      padding: 8px 10px; border-bottom: 1px solid var(--border); font-size: 12px;
+    }
+    .standings-table th { color: var(--muted); text-transform: uppercase; font-size: 10px; }
+    .standings-table tr:first-child td { color: var(--neon-amber); font-weight: 900; }
+
+    /* Footer Legal Bar */
+    .legal-bar {
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 10px; font-size: 11px; color: var(--muted);
+      border-top: 1px solid var(--border); padding-top: 12px;
+    }
+    .legal-bar a { color: var(--muted); text-decoration: none; margin-left: 12px; }
+    .legal-bar a:hover { color: var(--neon-cyan); }
+  </style>
+</head>
+<body>
+
+  <!-- Orientation Helper Banner (Portrait Mode) -->
+  <div id="orientation-banner">
+    <span>🏎️ HORIZONTAL COCKPIT MODE: Rotate device to Landscape for authentic racing view</span>
+    <button id="btn-request-fullscreen" style="background: rgba(0,0,0,0.6); border: 1px solid #fff; color: #fff; padding: 4px 10px; border-radius: 6px; font-size: 10px; font-weight: 800; cursor: pointer;">⛶ EXPAND</button>
+  </div>
+
+  <!-- 3D Three.js WebGL Canvas Container -->
+  <div id="canvas-container"></div>
+
+  <!-- UI & HUD Overlay Layer -->
+  <div class="ui-layer">
+
+    <!-- ========================================================
+         WELCOME WINDOW: "Apex Dynamics Motorsport Studios"
+         ======================================================== -->
+    <div id="view-welcome-studios" class="ui-modal active">
+      <div class="modal-box welcome-window-box">
+        <div class="welcome-header">
+          <div>
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+              <div class="logo-emblem" style="width: 34px; height: 34px; font-size: 16px;">A</div>
+              <p class="welcome-subtitle">Apex Dynamics Motorsport Studios</p>
+            </div>
+            <h1 class="welcome-title">Welcome to "Apex Dynamics Motorsport Studios"</h1>
+            <div class="welcome-owner">FOUNDED & OWNED BY ABDULKADRI JAITEH • SLOGAN: “DREAM. BUILD. RACE.”</div>
+          </div>
+          <button id="btn-close-welcome-top" style="background: rgba(255,255,255,0.06); border: 1px solid var(--border); color: #fff; width: 32px; height: 32px; border-radius: 50%; font-size: 14px; cursor: pointer;">✕</button>
+        </div>
+
+        <p style="font-size: 13px; color: var(--text); line-height: 1.5; margin: 0 0 14px 0;">
+          Introducing <strong>APEX RIVALS: MOTORSPORT</strong> — our next-generation 3D racing simulation engineered from the ground up for high-velocity mobile and browser gameplay. Featuring our new <strong>Horizontal Cockpit Layout</strong>, realistic Formula-class aerodynamics, custom circuit geometry, dynamic procedural V8 sound synthesis, and aggressive AI competitors.
+        </p>
+
+        <div class="welcome-features-grid">
+          <div class="feature-item-card">
+            <h4>🏎️ Formula-Class Aero</h4>
+            <p>Monocoque chassis, high-downforce wings, halo frame, and turnable front wheels responsive to driver steering.</p>
+          </div>
+          <div class="feature-item-card">
+            <h4>🏁 Apex Grand Prix Circuit</h4>
+            <p>18-waypoint fictional Catmull-Rom circuit, kerbs, braking boards, sector checkpoints, and 5-red-light starting gantry.</p>
+          </div>
+          <div class="feature-item-card">
+            <h4>🔊 Real-Time V8 Acoustics</h4>
+            <p>Procedural Web Audio engine synthesizer simulating engine RPM, gear shift pops, and aggressive tire screech.</p>
+          </div>
+          <div class="feature-item-card">
+            <h4>📱 Horizontal Cockpit Controls</h4>
+            <p>Dual-thumb horizontal landscape touch controls (Steer, Gas, Progressive Brake, DRS Boost) and full keyboard controls.</p>
+          </div>
+        </div>
+
+        <div class="btn-row" style="margin-top: 10px;">
+          <button id="btn-welcome-enter-cockpit" class="btn btn-primary" style="font-size: 14px; padding: 14px 24px;">🏎️ Enter Cockpit & Race</button>
+          <button id="btn-welcome-garage" class="btn btn-secondary">Garage & Liveries</button>
+          <button id="btn-welcome-championship" class="btn btn-secondary">Championship</button>
+          <button id="btn-welcome-settings" class="btn btn-secondary">Settings</button>
+          <button id="btn-welcome-dismiss" class="btn btn-secondary" style="margin-left: auto;">Continue to Menu</button>
+        </div>
+
+        <div class="legal-bar" style="margin-top: 18px;">
+          <span>© 2026 Apex Dynamics Motorsport Studios · Abdulkadri Jaiteh · Slogan: “DREAM. BUILD. RACE.”</span>
+          <div>
+            <a href="/privacy/">Privacy Policy</a>
+            <a href="/terms/">Terms of Service</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 1. MAIN MENU SCREEN (Horizontal Split) -->
+    <div id="view-main-menu" class="menu-view">
+      <div class="brand-header">
+        <div class="studio-badge" id="btn-header-open-welcome">
+          <div class="logo-emblem">A</div>
+          <div class="studio-meta">
+            <h2>Apex Dynamics Motorsport Studios</h2>
+            <p>Founded & Owned by Abdulkadri Jaiteh</p>
+          </div>
+        </div>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <button id="btn-menu-welcome-window" class="btn btn-secondary" style="padding: 6px 14px; font-size: 11px;">🏢 Studio Info</button>
+          <button id="btn-menu-toggle-horizontal" class="btn btn-secondary" style="padding: 6px 14px; font-size: 11px;">⛶ Horizontal Mode</button>
+          <div class="owner-pill">“DREAM. BUILD. RACE.”</div>
+        </div>
+      </div>
+
+      <div class="horizontal-layout-container">
+        <!-- Left Column: Title & Actions -->
+        <div class="horizontal-col-left">
+          <div class="slogan-banner">NEXT-GEN 3D MOTORSPORT SIMULATION</div>
+          <h1 class="game-title">APEX RIVALS: MOTORSPORT</h1>
+          <p class="game-lead">Experience high-velocity Formula racing with horizontal cockpit layout, real-time procedural acoustics, PBR automotive shaders, and competitive AI rivals.</p>
+          <div class="btn-row">
+            <button id="btn-play-quick" class="btn btn-primary" style="padding: 14px 28px; font-size: 14px;">🏎️ Start Race • Apex GP</button>
+            <button id="btn-open-garage" class="btn btn-secondary">Garage & Liveries</button>
+            <button id="btn-open-championship" class="btn btn-secondary">Championship</button>
+            <button id="btn-open-settings" class="btn btn-secondary">Settings</button>
+          </div>
+        </div>
+
+        <!-- Right Column: Quick Telemetry & Studio Specs -->
+        <div class="horizontal-col-right" style="background: rgba(14,20,29,0.7); border: 1px solid var(--border); border-radius: 16px; padding: 20px;">
+          <div style="font-size: 11px; font-weight: 800; color: var(--neon-cyan); letter-spacing: 0.15em; margin-bottom: 8px;">CIRCUIT SPECIFICATION</div>
+          <h3 style="margin: 0 0 10px 0; font-size: 18px; color: #fff;">Apex Grand Prix International</h3>
+          <div style="font-size: 12px; color: var(--muted); line-height: 1.5; margin-bottom: 14px;">
+            18-Turn Coastal Grand Prix Ribbon • 4,820m Lap Distance • 3 High-Speed DRS Zones • 335 KM/H Top Speed.
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <div style="background: var(--surface-2); padding: 8px 12px; border-radius: 8px; flex: 1; text-align: center;">
+              <div style="font-size: 14px; font-weight: 900; color: var(--racing-red); font-family: monospace;">P1–P4</div>
+              <div style="font-size: 9px; color: var(--muted); text-transform: uppercase;">Grid Size</div>
+            </div>
+            <div style="background: var(--surface-2); padding: 8px 12px; border-radius: 8px; flex: 1; text-align: center;">
+              <div style="font-size: 14px; font-weight: 900; color: var(--neon-cyan); font-family: monospace;">3 LAPS</div>
+              <div style="font-size: 9px; color: var(--muted); text-transform: uppercase;">Grand Prix</div>
+            </div>
+            <div style="background: var(--surface-2); padding: 8px 12px; border-radius: 8px; flex: 1; text-align: center;">
+              <div style="font-size: 14px; font-weight: 900; color: var(--neon-amber); font-family: monospace;">60 FPS</div>
+              <div style="font-size: 9px; color: var(--muted); text-transform: uppercase;">PBR WebGL</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="legal-bar">
+        <span>© 2026 Apex Dynamics Motorsport Studios · Abdulkadri Jaiteh</span>
+        <div>
+          <a href="/privacy/">Privacy Policy</a>
+          <a href="/terms/">Terms of Service</a>
+          <a href="/data-deletion/">Data Deletion</a>
+          <a href="/account-deletion/">Account Deletion</a>
+          <a href="mailto:abux.one@gmail.com">Contact Support</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. IN-GAME HORIZONTAL COCKPIT HUD -->
+    <div id="hud-overlay">
+      <!-- Top Horizontal Cockpit Telemetry Bar -->
+      <div class="hud-top-bar">
+        <!-- Position & Lap Chip -->
+        <div class="hud-chip">
+          <div id="hud-rank" class="hud-pos-pill">P1</div>
+          <div>
+            <div id="hud-lap" class="hud-lap-text">LAP 1 / 3</div>
+            <div id="hud-sector" style="font-size: 9px; color: var(--muted); font-family: monospace;">SEC 1 · DELTA +0.00s</div>
+          </div>
+        </div>
+
+        <!-- Horizontal Circuit Progress Minimap Track Ribbon -->
+        <div class="hud-track-progress" title="Live Circuit Positions">
+          <div id="track-runner-player" class="track-runner-player"></div>
+          <div id="track-runner-ai0" class="track-runner-ai" style="background: var(--neon-cyan); top: 0px;"></div>
+          <div id="track-runner-ai1" class="track-runner-ai" style="background: var(--metallic-silver); top: 0px;"></div>
+          <div id="track-runner-ai2" class="track-runner-ai" style="background: var(--neon-amber); top: 0px;"></div>
+        </div>
+
+        <!-- Lap Timer Chip -->
+        <div class="hud-chip" style="text-align: right;">
+          <div>
+            <div id="hud-lap-time" class="hud-timer-text">0:00.000</div>
+            <div id="hud-best-lap" style="font-size: 9px; color: var(--muted); font-family: monospace;">BEST: --:--</div>
+          </div>
+        </div>
+
+        <!-- Controls (Cam, Fullscreen, Mute, Pause) -->
+        <div style="display: flex; gap: 6px; pointer-events: auto;">
+          <button id="btn-fullscreen-toggle" class="hud-chip" style="cursor: pointer; font-size: 11px; font-weight: 800; padding: 6px 10px;">⛶ FULL</button>
+          <button id="hud-cam-btn" class="hud-chip" style="cursor: pointer; font-size: 11px; font-weight: 800; padding: 6px 10px;">📷 CAM</button>
+          <button id="hud-welcome-btn" class="hud-chip" style="cursor: pointer; font-size: 11px; font-weight: 800; padding: 6px 10px;">🏎️ CAR</button>
+          <button id="hud-mute-btn" class="hud-chip" style="cursor: pointer; font-size: 14px; padding: 6px 10px;">🔊</button>
+          <button id="hud-pause-btn" class="hud-chip" style="cursor: pointer; font-weight: 800; font-size: 11px; color: var(--racing-red); padding: 6px 12px;">PAUSE</button>
+        </div>
+      </div>
+
+    <!-- DIRECT PLAYABLE MODE HORIZONTAL LAUNCH OVERLAY -->
+    <div id="direct-playable-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 60; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(7,10,15,0.75); backdrop-filter: blur(8px); pointer-events: auto;">
+      <div style="background: rgba(14,20,29,0.92); border: 2px solid var(--racing-red); border-radius: 16px; padding: 22px 36px; max-width: 520px; text-align: center; box-shadow: 0 0 35px var(--racing-red-glow);">
+        <div style="font-size: 10px; font-weight: 900; letter-spacing: 2px; color: var(--neon-cyan); margin-bottom: 4px;">APEX DYNAMICS MOTORSPORT STUDIOS</div>
+        <h1 style="margin: 0 0 6px 0; font-size: 28px; font-weight: 900; letter-spacing: 1px; color: #fff;">APEX RIVALS: <span style="color: var(--racing-red);">MOTORSPORT</span></h1>
+        <p style="margin: 0 0 16px 0; font-size: 12px; color: var(--muted); letter-spacing: 0.5px;">DREAM. BUILD. RACE. · Founded by Abdulkadri Jaiteh</p>
+
+        <button id="btn-direct-tap-race" class="btn btn-primary" style="padding: 14px 32px; font-size: 15px; font-weight: 900; letter-spacing: 1.5px; width: 100%; border-radius: 10px; cursor: pointer; box-shadow: 0 4px 20px var(--racing-red-glow);">
+          🏁 START RACE • LIGHTS OUT
+        </button>
+
+        <div style="display: flex; justify-content: center; gap: 16px; margin-top: 14px; font-size: 11px; color: var(--text);">
+          <span>🕹️ <b>Left:</b> Steer</span>
+          <span>⚡ <b>Right:</b> Gas / Brake / Boost</span>
+          <span>📱 <b>Horizontal Cockpit</b></span>
+        </div>
+      </div>
+    </div>
+
+      <!-- Bottom Horizontal Cockpit Controls & Telemetry -->
+      <div class="hud-bottom-bar">
+        <!-- Far-Left: Horizontal Steering Buttons -->
+        <div class="steer-cluster-horizontal">
+          <button id="btn-steer-left" class="steer-btn">◀ STEER</button>
+          <button id="btn-steer-right" class="steer-btn">STEER ▶</button>
+        </div>
+
+        <!-- Center: Low-Profile Horizontal Cockpit Telemetry Cluster -->
+        <div class="telemetry-horizontal-dash">
+          <div class="speedo-row">
+            <div id="hud-speed" class="speed-number">0</div>
+            <div class="speed-unit">KM/H</div>
+            <div id="hud-gear" class="gear-chip">1</div>
+          </div>
+          <div class="rpm-bar-container">
+            <div id="hud-rpm-bar" class="rpm-bar"></div>
+          </div>
+          <div class="boost-bar-container">
+            <div id="hud-boost-bar" class="boost-bar"></div>
+          </div>
+        </div>
+
+        <!-- Far-Right: Horizontal Drive Pedals & Boost -->
+        <div class="pedals-cluster-horizontal">
+          <button id="btn-boost" class="pedal-btn boost">⚡ DRS</button>
+          <button id="btn-brake" class="pedal-btn brake">■ BRAKE</button>
+          <button id="btn-gas" class="pedal-btn gas">▲ GAS</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. PAUSE MODAL -->
+    <div id="view-pause" class="ui-modal">
+      <div class="modal-box">
+        <h2>RACE PAUSED</h2>
+        <p>Apex Grand Prix International · Horizontal Cockpit Active</p>
+        <div class="btn-row" style="flex-direction: column; gap: 10px;">
+          <button id="btn-resume-race" class="btn btn-primary">Resume Racing</button>
+          <button id="btn-pause-open-welcome" class="btn btn-secondary">🏢 Apex Dynamics Studios Info</button>
+          <button id="btn-restart-race" class="btn btn-secondary">Restart Lap</button>
+          <button id="btn-quit-race" class="btn btn-secondary">Exit to Main Menu</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. RACE FINISH / PODIUM MODAL -->
+    <div id="view-finish" class="ui-modal">
+      <div class="modal-box">
+        <h2 id="finish-title">CHECKERED FLAG!</h2>
+        <p>Apex Dynamics Motorsport Studios Grand Prix Complete!</p>
+        <div class="stat-grid">
+          <div class="stat-item">
+            <div id="finish-pos" class="stat-val">P1</div>
+            <div class="stat-label">Position</div>
+          </div>
+          <div class="stat-item">
+            <div id="finish-time" class="stat-val">2:14.380</div>
+            <div class="stat-label">Total Time</div>
+          </div>
+          <div class="stat-item">
+            <div id="finish-best-lap" class="stat-val">43.820</div>
+            <div class="stat-label">Fastest Lap</div>
+          </div>
+          <div class="stat-item">
+            <div id="finish-top-speed" class="stat-val">312 KM/H</div>
+            <div class="stat-label">Top Speed</div>
+          </div>
+        </div>
+        <div class="btn-row" style="justify-content: center;">
+          <button onclick="window.apexRivalsGame.restartRace()" class="btn btn-primary">Race Again</button>
+          <button class="btn btn-secondary btn-back-menu">Main Menu</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. GARAGE & LIVERY SCREEN (Horizontal 2-Column) -->
+    <div id="view-garage" class="menu-view">
+      <div class="brand-header">
+        <div class="studio-badge">
+          <div class="logo-emblem">A</div>
+          <div class="studio-meta">
+            <h2>Apex Garage & Tuning Studio</h2>
+            <p>Formula Prototype Specification</p>
+          </div>
+        </div>
+        <button class="btn btn-secondary btn-back-menu">◀ Back to Menu</button>
+      </div>
+
+      <div class="horizontal-layout-container" style="margin: auto 0;">
+        <div class="horizontal-col-left">
+          <h2 style="font-size: 28px; margin: 0 0 10px 0;">CHOOSE VEHICLE LIVERY</h2>
+          <p style="color: var(--muted); margin: 0 0 18px 0;">Select your custom racing livery. Rotate and inspect the 3D car in real time.</p>
+          <div class="livery-grid">
+            <div class="livery-chip selected" data-livery="obsidian">
+              <h4>Apex Obsidian #11</h4>
+              <span>Metallic Black & Crimson</span>
+            </div>
+            <div class="livery-chip" data-livery="scuderia">
+              <h4>Scuderia Redline #07</h4>
+              <span>Racing Rosso Corsa</span>
+            </div>
+            <div class="livery-chip" data-livery="silver">
+              <h4>Velocity Silver #01</h4>
+              <span>Brushed Chrome & Carbon</span>
+            </div>
+            <div class="livery-chip" data-livery="volt">
+              <h4>Volt Cyberpunk #44</h4>
+              <span>Obsidian & Neon Cyan</span>
+            </div>
+          </div>
+          <button onclick="window.apexRivalsGame.startCountdown()" class="btn btn-primary">Deploy to Track</button>
+        </div>
+
+        <div class="horizontal-col-right" style="background: rgba(14,20,29,0.7); border: 1px solid var(--border); border-radius: 16px; padding: 20px;">
+          <div style="font-size: 11px; font-weight: 800; color: var(--racing-red); letter-spacing: 0.15em; margin-bottom: 6px;">VEHICLE TELEMETRY</div>
+          <h4 style="margin: 0 0 10px 0; font-size: 16px; color: #fff;">Chassis Spec: APEX-F1 Evo</h4>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px;">
+            <div style="background: var(--surface-2); padding: 8px; border-radius: 6px;">Powertrain: <strong>1.6L Turbo V8 Hybrid</strong></div>
+            <div style="background: var(--surface-2); padding: 8px; border-radius: 6px;">Downforce: <strong>1,850 kg @ 250 km/h</strong></div>
+            <div style="background: var(--surface-2); padding: 8px; border-radius: 6px;">Top Speed: <strong>335 km/h</strong></div>
+            <div style="background: var(--surface-2); padding: 8px; border-radius: 6px;">Transmission: <strong>8-Speed Paddle</strong></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="legal-bar">
+        <span>Apex Dynamics Motorsport Studios · Abdulkadri Jaiteh · Slogan: “DREAM. BUILD. RACE.”</span>
+      </div>
+    </div>
+
+    <!-- 6. CHAMPIONSHIP MODE SCREEN -->
+    <div id="view-championship" class="menu-view">
+      <div class="brand-header">
+        <div class="studio-badge">
+          <div class="logo-emblem">A</div>
+          <div class="studio-meta">
+            <h2>Apex World Championship</h2>
+            <p>Season Standings & Points Table</p>
+          </div>
+        </div>
+        <button class="btn btn-secondary btn-back-menu">◀ Back to Menu</button>
+      </div>
+
+      <div style="max-width: 640px; margin: auto 0;">
+        <h2 style="font-size: 26px; margin: 0 0 10px 0;">DRIVERS' CHAMPIONSHIP</h2>
+        <table class="standings-table">
+          <thead>
+            <tr>
+              <th>Pos</th>
+              <th>Driver</th>
+              <th>Team</th>
+              <th>PTS</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>1</td>
+              <td>Abdulkadri Jaiteh (You)</td>
+              <td>Apex Dynamics</td>
+              <td>25</td>
+            </tr>
+            <tr>
+              <td>2</td>
+              <td>Alexander Vance</td>
+              <td>Scuderia Redline</td>
+              <td>18</td>
+            </tr>
+            <tr>
+              <td>3</td>
+              <td>Marcus Sterling</td>
+              <td>Silverstone GT</td>
+              <td>15</td>
+            </tr>
+            <tr>
+              <td>4</td>
+              <td>Kaito Tanaka</td>
+              <td>Volt Cyberworks</td>
+              <td>12</td>
+            </tr>
+          </tbody>
+        </table>
+        <button onclick="window.apexRivalsGame.startCountdown()" class="btn btn-primary">Race Next Round</button>
+      </div>
+
+      <div class="legal-bar">
+        <span>Apex Dynamics Motorsport Studios · Abdulkadri Jaiteh · Slogan: “DREAM. BUILD. RACE.”</span>
+      </div>
+    </div>
+
+    <!-- 7. SETTINGS SCREEN -->
+    <div id="view-settings" class="menu-view">
+      <div class="brand-header">
+        <div class="studio-badge">
+          <div class="logo-emblem">A</div>
+          <div class="studio-meta">
+            <h2>Simulation Settings</h2>
+            <p>Performance & Acoustics</p>
+          </div>
+        </div>
+        <button class="btn btn-secondary btn-back-menu">◀ Back to Menu</button>
+      </div>
+
+      <div style="max-width: 520px; margin: auto 0;">
+        <h2 style="font-size: 26px; margin: 0 0 16px 0;">GAME CONFIGURATION</h2>
+        <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; background: var(--surface-2); padding: 12px; border-radius: 10px;">
+            <span>Cockpit Layout</span>
+            <span style="color: var(--neon-cyan); font-weight: 800;">Horizontal Landscape Style</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; background: var(--surface-2); padding: 12px; border-radius: 10px;">
+            <span>Graphics Quality</span>
+            <span style="color: var(--neon-cyan); font-weight: 800;">60 FPS (Ultra PBR)</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; background: var(--surface-2); padding: 12px; border-radius: 10px;">
+            <span>Audio & V8 Engine Acoustics</span>
+            <span style="color: var(--racing-red); font-weight: 800;">Synthesizer Active</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; background: var(--surface-2); padding: 12px; border-radius: 10px;">
+            <span>Input Scheme</span>
+            <span style="color: var(--metallic-silver); font-weight: 800;">Touch & Keyboard</span>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-back-menu">Save & Return</button>
+      </div>
+
+      <div class="legal-bar">
+        <span>Apex Dynamics Motorsport Studios · Abdulkadri Jaiteh · Slogan: “DREAM. BUILD. RACE.”</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Local / CDN Three.js library with automatic fallback -->
+  <script src="three.min.js"></script>
+  <script>
+    if (typeof THREE === 'undefined') {
+      document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"><\/script>');
+    }
+  </script>
+  <!-- Game Engine Script -->
+  <script src="game.js"></script>
+</body>
+</html>

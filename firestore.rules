@@ -1,0 +1,279 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // =========================================================================
+    // PILLAR 0: GLOBAL DEFAULT-DENY SAFETY NET
+    // =========================================================================
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // =========================================================================
+    // GLOBAL HARDENED PRIMITIVES
+    // =========================================================================
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isBoundedStringList(arr, maxLen) {
+      return arr is list && arr.size() <= maxLen && (arr.size() == 0 || arr[0] is string);
+    }
+
+    // =========================================================================
+    // VALIDATION BLUEPRINTS (LEAST-PRIVILEGE & ANTI-CHEAT)
+    // =========================================================================
+
+    // Starter-only client profile creation bounds (privileged progression comes via Cloud Functions)
+    function isValidStarterPlayerProfile(data, uid) {
+      return data.userId is string && data.userId == uid &&
+             data.username is string && data.username.size() >= 2 && data.username.size() <= 40 &&
+             (!('avatarUrl' in data) || data.avatarUrl == null || (data.avatarUrl is string && data.avatarUrl.size() <= 500)) &&
+             data.level is int && data.level == 1 &&
+             data.xp is int && data.xp == 0 &&
+             data.coins is int && data.coins >= 0 && data.coins <= 250 &&
+             data.credits is int && data.credits >= 0 && data.credits <= 50000 &&
+             data.totalRaces is int && data.totalRaces == 0 &&
+             data.totalVictories is int && data.totalVictories == 0 &&
+             isBoundedStringList(data.ownedVehicleIds, 6) &&
+             data.unlockedAchievements is list && data.unlockedAchievements.size() == 0 &&
+             (!('unlockedTrackIds' in data) || isBoundedStringList(data.unlockedTrackIds, 6)) &&
+             data.careerTierUnlocked is int && data.careerTierUnlocked == 1 &&
+             (!('dailyLoginStreak' in data) || (data.dailyLoginStreak is int && data.dailyLoginStreak >= 0 && data.dailyLoginStreak <= 1)) &&
+             (!('lastDailyClaimDate' in data) || data.lastDailyClaimDate == null || (data.lastDailyClaimDate is string && data.lastDailyClaimDate.size() <= 16)) &&
+             (!('schemaVersion' in data) || (data.schemaVersion is int && data.schemaVersion >= 8 && data.schemaVersion <= 20)) &&
+             (!('v8LegacyMigrated' in data) || data.v8LegacyMigrated is bool) &&
+             data.syncRevision is int && data.syncRevision == 1 &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.lastActiveAt is timestamp && data.lastActiveAt <= request.time;
+    }
+
+    // Client profile metadata updates cannot alter server-authoritative currencies, XP, or unlocks
+    function isValidProfileMetadataUpdate(data, uid) {
+      return data.userId == uid &&
+             data.username is string && data.username.size() >= 2 && data.username.size() <= 40 &&
+             (!('avatarUrl' in data) || data.avatarUrl == null || (data.avatarUrl is string && data.avatarUrl.size() <= 500)) &&
+             data.lastActiveAt is timestamp && data.lastActiveAt <= request.time;
+    }
+
+    // Cloud Save Snapshot Validation Blueprint
+    function isValidCloudSave(data, uid, slotId) {
+      return data.userId is string && data.userId == uid &&
+             data.saveSlotId is string && data.saveSlotId == slotId &&
+             data.syncRevision is int && data.syncRevision >= 1 &&
+             data.clientDeviceName is string && data.clientDeviceName.size() >= 1 && data.clientDeviceName.size() <= 80 &&
+             data.loadoutsJson is string && data.loadoutsJson.size() <= 20000 &&
+             data.settingsJson is string && data.settingsJson.size() <= 5000 &&
+             data.careerProgressJson is string && data.careerProgressJson.size() <= 10000 &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    // Multiplayer Room Validation Blueprint
+    function isValidMultiplayerRoom(data) {
+      return data.hostUserId is string && data.hostUserId.size() >= 1 && data.hostUserId.size() <= 128 &&
+             data.roomCode is string && data.roomCode.size() == 6 &&
+             data.trackId is string && data.trackId.size() >= 1 && data.trackId.size() <= 64 &&
+             data.vehicleClass is string && data.vehicleClass.size() >= 1 && data.vehicleClass.size() <= 40 &&
+             data.status in ['WAITING', 'RACING', 'FINISHED'] &&
+             data.maxPlayers is int && data.maxPlayers >= 2 && data.maxPlayers <= 8 &&
+             isBoundedStringList(data.playerUids, 8) &&
+             data.playerUids.size() >= 1 && data.playerUids.size() <= data.maxPlayers &&
+             data.dedicatedServerEndpoint is string && data.dedicatedServerEndpoint.size() <= 256 &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    // =========================================================================
+    // COLLECTION 1: /users/{userId} (PLAYER ACCOUNTS & SUBCOLLECTIONS)
+    // Privileged progression fields (coins, credits, xp, level, ownedVehicleIds,
+    // unlockedAchievements) are mutated exclusively by trusted Cloud Functions.
+    // =========================================================================
+    match /users/{userId} {
+      allow get: if isSignedIn() && isValidId(userId) && request.auth.uid == userId;
+      allow list: if isSignedIn() && existing().userId == request.auth.uid;
+
+      allow create: if isSignedIn() &&
+                       isValidId(userId) &&
+                       request.auth.uid == userId &&
+                       incoming().keys().hasAll([
+                         'userId', 'username', 'level', 'xp', 'coins', 'credits',
+                         'totalRaces', 'totalVictories', 'ownedVehicleIds',
+                         'unlockedAchievements', 'careerTierUnlocked', 'syncRevision',
+                         'createdAt', 'lastActiveAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'username', 'avatarUrl', 'level', 'xp', 'coins', 'credits',
+                         'totalRaces', 'totalVictories', 'ownedVehicleIds',
+                         'unlockedAchievements', 'unlockedTrackIds', 'careerTierUnlocked',
+                         'dailyLoginStreak', 'lastDailyClaimDate', 'schemaVersion',
+                         'v8LegacyMigrated', 'syncRevision', 'createdAt', 'lastActiveAt'
+                       ]) &&
+                       isValidStarterPlayerProfile(incoming(), userId);
+
+      // Clients may only update public handle/avatar/activity timestamp.
+      // Currency, XP, level, achievements, owned vehicles, and tracks are server-only.
+      allow update: if isSignedIn() &&
+                       isValidId(userId) &&
+                       request.auth.uid == userId &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'username', 'avatarUrl', 'lastActiveAt'
+                       ]) &&
+                       isValidProfileMetadataUpdate(incoming(), userId);
+
+      allow delete: if isSignedIn() && isValidId(userId) && request.auth.uid == userId;
+
+      // -----------------------------------------------------------------------
+      // SUBCOLLECTION 1A: /users/{userId}/cloud_saves/{saveSlotId}
+      // Enforces monotonic syncRevision so older offline saves cannot overwrite newer saves.
+      // Protects `v8_rollback_backup` from client deletion or retroactive overwriting.
+      // -----------------------------------------------------------------------
+      match /cloud_saves/{saveSlotId} {
+        allow get: if isSignedIn() && isValidId(userId) && isValidId(saveSlotId) && request.auth.uid == userId;
+        allow list: if isSignedIn() && request.auth.uid == userId;
+
+        allow create: if isSignedIn() &&
+                         isValidId(userId) &&
+                         isValidId(saveSlotId) &&
+                         request.auth.uid == userId &&
+                         incoming().keys().hasAll([
+                           'userId', 'saveSlotId', 'syncRevision', 'clientDeviceName',
+                           'loadoutsJson', 'settingsJson', 'careerProgressJson',
+                           'createdAt', 'updatedAt'
+                         ]) &&
+                         incoming().keys().hasOnly([
+                           'userId', 'saveSlotId', 'syncRevision', 'clientDeviceName',
+                           'loadoutsJson', 'settingsJson', 'careerProgressJson',
+                           'createdAt', 'updatedAt'
+                         ]) &&
+                         isValidCloudSave(incoming(), userId, saveSlotId);
+
+        allow update: if isSignedIn() &&
+                         isValidId(userId) &&
+                         isValidId(saveSlotId) &&
+                         request.auth.uid == userId &&
+                         saveSlotId != 'v8_rollback_backup' &&
+                         isValidCloudSave(incoming(), userId, saveSlotId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().saveSlotId == existing().saveSlotId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().syncRevision > existing().syncRevision &&
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'syncRevision', 'clientDeviceName', 'loadoutsJson',
+                           'settingsJson', 'careerProgressJson', 'updatedAt'
+                         ]);
+
+        allow delete: if isSignedIn() &&
+                         isValidId(userId) &&
+                         isValidId(saveSlotId) &&
+                         request.auth.uid == userId &&
+                         saveSlotId != 'v8_rollback_backup';
+      }
+
+      // -----------------------------------------------------------------------
+      // SUBCOLLECTION 1B: /users/{userId}/economy_transactions/{txId}
+      // Strict Server-Authoritative Audit Ledger: owner read-only, written exclusively
+      // by trusted Cloud Functions via Admin SDK.
+      // -----------------------------------------------------------------------
+      match /economy_transactions/{txId} {
+        allow get: if isSignedIn() && isValidId(userId) && isValidId(txId) && request.auth.uid == userId;
+        allow list: if isSignedIn() && request.auth.uid == userId;
+        allow create, update, delete: if false;
+      }
+
+      // -----------------------------------------------------------------------
+      // SUBCOLLECTION 1C: /users/{userId}/event_completions/{eventId}
+      // Owner read-only; verified completions and rewards are written by Cloud Functions.
+      // -----------------------------------------------------------------------
+      match /event_completions/{eventId} {
+        allow get: if isSignedIn() && isValidId(userId) && isValidId(eventId) && request.auth.uid == userId;
+        allow list: if isSignedIn() && request.auth.uid == userId;
+        allow create, update, delete: if false;
+      }
+
+      // -----------------------------------------------------------------------
+      // SUBCOLLECTION 1D: /users/{userId}/achievements/{achievementId}
+      // Owner read-only; milestone unlocks and claims are written by Cloud Functions.
+      // -----------------------------------------------------------------------
+      match /achievements/{achievementId} {
+        allow get: if isSignedIn() && isValidId(userId) && isValidId(achievementId) && request.auth.uid == userId;
+        allow list: if isSignedIn() && request.auth.uid == userId;
+        allow create, update, delete: if false;
+      }
+    }
+
+    // =========================================================================
+    // COLLECTION 2: /race_results/{raceResultId} (COMPETITIVE LEADERBOARDS)
+    // Competitive submissions are verified and written exclusively by the
+    // `submitCompetitiveRaceResult` Cloud Function to block spoofed times/rewards.
+    // =========================================================================
+    match /race_results/{raceResultId} {
+      allow get: if isSignedIn() && isValidId(raceResultId);
+      allow list: if isSignedIn() && (
+        existing().userId == request.auth.uid ||
+        existing().lapTimeMs >= 12000
+      );
+
+      allow create, update: if false;
+      allow delete: if isSignedIn() && isValidId(raceResultId) && existing().userId == request.auth.uid;
+    }
+
+    // =========================================================================
+    // COLLECTION 3: /multiplayer_rooms/{roomId} (MATCHMAKING & PRIVATE LOBBIES)
+    // =========================================================================
+    match /multiplayer_rooms/{roomId} {
+      allow get: if isSignedIn() && isValidId(roomId);
+      allow list: if isSignedIn() && existing().status in ['WAITING', 'RACING', 'FINISHED'];
+
+      allow create: if isSignedIn() &&
+                       isValidId(roomId) &&
+                       incoming().hostUserId == request.auth.uid &&
+                       incoming().status == 'WAITING' &&
+                       incoming().keys().hasAll([
+                         'hostUserId', 'roomCode', 'trackId', 'vehicleClass',
+                         'status', 'maxPlayers', 'playerUids',
+                         'dedicatedServerEndpoint', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'hostUserId', 'roomCode', 'trackId', 'vehicleClass',
+                         'status', 'maxPlayers', 'playerUids',
+                         'dedicatedServerEndpoint', 'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidMultiplayerRoom(incoming());
+
+      allow update: if isSignedIn() &&
+                       isValidId(roomId) &&
+                       isValidMultiplayerRoom(incoming()) &&
+                       existing().status != 'FINISHED' &&
+                       incoming().hostUserId == existing().hostUserId &&
+                       incoming().roomCode == existing().roomCode &&
+                       incoming().createdAt == existing().createdAt && (
+                         (request.auth.uid == existing().hostUserId &&
+                          incoming().diff(existing()).affectedKeys().hasOnly([
+                            'status', 'trackId', 'vehicleClass', 'playerUids',
+                            'dedicatedServerEndpoint', 'updatedAt'
+                          ])) ||
+                         (existing().status == 'WAITING' &&
+                          incoming().diff(existing()).affectedKeys().hasOnly([
+                            'playerUids', 'updatedAt'
+                          ]))
+                       );
+
+      allow delete: if isSignedIn() && isValidId(roomId) && existing().hostUserId == request.auth.uid;
+    }
+  }
+}
